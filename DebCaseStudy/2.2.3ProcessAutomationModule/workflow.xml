@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns="uri:oozie:workflow:0.2" name="cdw-sapp-Process-Automation-Module">
+<start to = "Create_Branch_External_Table" />
+  <!--Create Branch Table in Hive-->
+  <action name = "Create_Branch_External_Table">
+    <hive xmlns = "uri:oozie:hive-action:0.4">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <script>${nameNode}/Credit_Card_System/Oozie/externalbranch.hive</script>
+    </hive>
+   <ok to = "sqoop-node-cdw-sapp-branch" />
+   <error to="fail"/>
+  </action>
+<!--sqoop import of CDW_SAPP_BRANCH-->
+ <action name="sqoop-node-cdw-sapp-branch">
+   <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+     <job-tracker>${jobTracker}</job-tracker>
+     <name-node>${nameNode}</name-node>
+     <prepare>
+       <delete path="${nameNode}/Credit_Card_System/CDW_SAPP_BRANCH"/>
+     </prepare>
+     <configuration>
+       <property>
+         <name>mapred.job.queue.name</name>
+         <value>${queueName}</value>
+       </property>
+     </configuration>
+     <arg>import</arg>
+     <arg>--connect</arg>
+     <arg>jdbc:mysql://localhost/CDW_SAPP</arg>
+     <arg>--driver</arg>
+     <arg>com.mysql.jdbc.Driver</arg>
+     <arg>--query</arg>
+     <arg>SELECT BRANCH_CODE, BRANCH_NAME, BRANCH_STREET, BRANCH_CITY, BRANCH_STATE, IFNULL(BRANCH_ZIP, 999999) AS `BRANCH_ZIP`, CONCAT( LEFT(BRANCH_PHONE, 3), "-", RIGHT(BRANCH_PHONE, 4)), LAST_UPDATED FROM CDW_SAPP_BRANCH WHERE $CONDITIONS</arg>
+     <arg>--split-by</arg>
+     <arg>BRANCH_CODE</arg>
+     <arg>--target-dir</arg>
+     <arg>/Credit_Card_System/CDW_SAPP_BRANCH</arg>
+     <arg>-m</arg>
+     <arg>1</arg>
+     <arg>--fields-terminated-by</arg>
+     <arg>,</arg>
+   </sqoop>
+   <ok to="Create_Customer_External_Table"/>
+   <error to="fail"/>
+ </action>
+<!--Create Customer Table in Hive-->
+ <action name = "Create_Customer_External_Table">
+  <hive xmlns = "uri:oozie:hive-action:0.4">
+    <job-tracker>${jobTracker}</job-tracker>
+    <name-node>${nameNode}</name-node>
+    <script>${nameNode}/Credit_Card_System/Oozie/externalcustomer.hive</script>
+  </hive>
+  <ok to = "sqoop-node-cdw-sapp-customer" />
+  <error to="fail"/>
+ </action>
+<!--sqoop import of CDW_SAPP_CUSTOMER-->
+ <action name="sqoop-node-cdw-sapp-customer">
+   <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+     <job-tracker>${jobTracker}</job-tracker>
+     <name-node>${nameNode}</name-node>
+     <prepare>
+       <delete path="${nameNode}/Credit_Card_System/CDW_SAPP_CUSTOMER"/>
+     </prepare>
+     <configuration>
+       <property>
+         <name>mapred.job.queue.name</name>
+         <value>${queueName}</value>
+       </property>
+     </configuration>
+     <arg>import</arg>
+     <arg>--connect</arg>
+     <arg>jdbc:mysql://localhost/CDW_SAPP</arg>
+     <arg>--driver</arg>
+     <arg>com.mysql.jdbc.Driver</arg>
+     <arg>--query</arg>
+     <arg>SELECT SSN, CONCAT(UPPER(LEFT(FIRST_NAME,1)),RIGHT(FIRST_NAME,(CHAR_LENGTH(FIRST_NAME)-1))) AS `FIRST_NAME`, lower(MIDDLE_NAME), CONCAT(UPPER(LEFT(LAST_NAME,1)),RIGHT(LAST_NAME,(CHAR_LENGTH(LAST_NAME)-1))), CREDIT_CARD_NO, CONCAT(APT_NO, " " ,STREET_NAME), CUST_CITY, CUST_STATE, CUST_COUNTRY, CAST(CUST_ZIP AS UNSIGNED), CONCAT(LEFT(CUST_PHONE, 3), "-", RIGHT(CUST_PHONE, 4)), CUST_EMAIL, LAST_UPDATED FROM CDW_SAPP_CUSTOMER WHERE $CONDITIONS</arg>
+     <arg>--split-by</arg>
+     <arg>SSN</arg>
+     <arg>--target-dir</arg>
+     <arg>/Credit_Card_System/CDW_SAPP_CUSTOMER</arg>
+     <arg>-m</arg>
+     <arg>1</arg>
+     <arg>--fields-terminated-by</arg>
+     <arg>,</arg>
+   </sqoop>
+   <ok to="Create_CreditCard_External_Table"/>
+   <error to="fail"/>
+  </action>
+
+  <!--Create CreditCard Table in Hive-->
+  <action name = "Create_CreditCard_External_Table">
+    <hive xmlns = "uri:oozie:hive-action:0.4">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <script>${nameNode}/Credit_Card_System/Oozie/externalcreditcard.hive</script>
+    </hive>
+   <ok to = "sqoop-node-cdw-sapp-creditcard"/>
+   <error to="fail"/>
+  </action>
+
+  <!--sqoop import of CDW_SAPP_CREDITCARD-->
+   <action name="sqoop-node-cdw-sapp-creditcard">
+     <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+       <job-tracker>${jobTracker}</job-tracker>
+       <name-node>${nameNode}</name-node>
+       <prepare>
+         <delete path="${nameNode}/Credit_Card_System/CDW_SAPP_CREDITCARD"/>
+       </prepare>
+       <configuration>
+         <property>
+           <name>mapred.job.queue.name</name>
+           <value>${queueName}</value>
+         </property>
+       </configuration>
+       <arg>import</arg>
+       <arg>--connect</arg>
+       <arg>jdbc:mysql://localhost/CDW_SAPP</arg>
+       <arg>--driver</arg>
+       <arg>com.mysql.jdbc.Driver</arg>
+       <arg>--query</arg>
+       <arg>SELECT TRANSACTION_ID, CREDIT_CARD_NO, CONCAT(YEAR,LPAD(MONTH,2,'00'),LPAD(DAY,2,'00')), CUST_SSN, BRANCH_CODE, TRANSACTION_TYPE, TRANSACTION_VALUE FROM CDW_SAPP_CREDITCARD WHERE $CONDITIONS</arg>
+       <arg>--split-by</arg>
+       <arg>TRANSACTION_ID</arg>
+       <arg>--target-dir</arg>
+       <arg>/Credit_Card_System/CDW_SAPP_CREDITCARD</arg>
+       <arg>-m</arg>
+       <arg>1</arg>
+       <arg>--fields-terminated-by</arg>
+       <arg>,</arg>
+     </sqoop>
+     <ok to="Create_Time_External_Table"/>
+     <error to="fail"/>
+    </action>
+
+    <action name = "Create_Time_External_Table">
+      <hive xmlns = "uri:oozie:hive-action:0.4">
+        <job-tracker>${jobTracker}</job-tracker>
+        <name-node>${nameNode}</name-node>
+        <script>${nameNode}/Credit_Card_System/Oozie/externaltime.hive</script>
+      </hive>
+     <ok to = "sqoop-node-cdw-sapp-time"/>
+     <error to="fail"/>
+    </action>
+
+    <action name="sqoop-node-cdw-sapp-time">
+      <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+        <job-tracker>${jobTracker}</job-tracker>
+        <name-node>${nameNode}</name-node>
+        <prepare>
+          <delete path="${nameNode}/Credit_Card_System/CDW_SAPP_TIME"/>
+        </prepare>
+        <configuration>
+          <property>
+            <name>mapred.job.queue.name</name>
+            <value>${queueName}</value>
+          </property>
+        </configuration>
+        <arg>import</arg>
+        <arg>--connect</arg>
+        <arg>jdbc:mysql://localhost/CDW_SAPP</arg>
+        <arg>--driver</arg>
+        <arg>com.mysql.jdbc.Driver</arg>
+        <arg>--query</arg>
+        <arg>SELECT CONCAT(YEAR,LPAD(MONTH,2,'00'), LPAD(DAY,2,'00')), DAY, MONTH, CASE WHEN MONTH BETWEEN 1 AND 3 THEN '1' WHEN MONTH BETWEEN 4 AND 6 THEN '2' WHEN MONTH BETWEEN 7 AND 9 THEN '3' WHEN MONTH BETWEEN 10 AND 12 THEN '4' END AS `Quarter`, YEAR FROM CDW_SAPP_CREDITCARD WHERE $CONDITIONS</arg>
+        <arg>--split-by</arg>
+        <arg>YEAR</arg>
+        <arg>--target-dir</arg>
+        <arg>/Credit_Card_System/CDW_SAPP_TIME</arg>
+        <arg>-m</arg>
+        <arg>1</arg>
+        <arg>--fields-terminated-by</arg>
+        <arg>,</arg>
+      </sqoop>
+      <ok to="end"/>
+      <error to="fail"/>
+     </action>
+
+ <kill name="fail">
+   <message>Sqoop failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+ </kill>
+ <end name="end"/>
+</workflow-app>

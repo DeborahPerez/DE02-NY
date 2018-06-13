@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow-app xmlns="uri:oozie:workflow:0.2" name="cdw-sapp-Process-Optimization-Module">
+<start to = "sqoop-update-branch" />
+  <!--Run sqoop job to update cdw sapp branch data-->
+  <action name="sqoop-update-branch">
+    <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <configuration>
+        <property>
+          <name>mapred.job.queue.name</name>
+          <value>${queueName}</value>
+        </property>
+      </configuration>
+      <arg>job</arg>
+      <arg>--meta-connect</arg>
+      <arg>jdbc:hsqldb:hsql://localhost:16000/sqoop</arg>
+      <arg>--exec</arg>
+      <arg>cdwsappBranchUpdateMerge</arg>
+      <archive>/Credit_Card_System/Oozie/lib/java-json.jar#java-json.jar</archive>
+    </sqoop>
+    <ok to="sqoop-update-customer"/>
+    <error to="fail"/>
+  </action>
+
+  <!--Run sqoop job to update cdw sapp customer data-->
+  <action name="sqoop-update-customer">
+    <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <configuration>
+        <property>
+          <name>mapred.job.queue.name</name>
+          <value>${queueName}</value>
+        </property>
+      </configuration>
+      <arg>job</arg>
+      <arg>--meta-connect</arg>
+      <arg>jdbc:hsqldb:hsql://localhost:16000/sqoop</arg>
+      <arg>--exec</arg>
+      <arg>cdwsappCustomerUpdateMerge</arg>
+      <archive>/Credit_Card_System/Oozie/lib/java-json.jar#java-json.jar</archive>
+    </sqoop>
+    <ok to="sqoop-update-creditcard"/>
+    <error to="fail"/>
+  </action>
+
+  <!--Run sqoop job to update cdw sapp creditcard data-->
+  <action name="sqoop-update-creditcard">
+    <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <configuration>
+        <property>
+          <name>mapred.job.queue.name</name>
+          <value>${queueName}</value>
+        </property>
+      </configuration>
+      <arg>job</arg>
+      <arg>--meta-connect</arg>
+      <arg>jdbc:hsqldb:hsql://localhost:16000/sqoop</arg>
+      <arg>--exec</arg>
+      <arg>cdwsappCreditCardUpdateAppend</arg>
+      <archive>/Credit_Card_System/Oozie/lib/java-json.jar#java-json.jar</archive>
+    </sqoop>
+    <ok to="sqoop-update-time"/>
+    <error to="fail"/>
+  </action>
+
+  <!--Run sqoop job to update cdw sapp time data-->
+  <action name="sqoop-update-time">
+    <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+      <job-tracker>${jobTracker}</job-tracker>
+      <name-node>${nameNode}</name-node>
+      <configuration>
+        <property>
+          <name>mapred.job.queue.name</name>
+          <value>${queueName}</value>
+        </property>
+      </configuration>
+      <arg>job</arg>
+      <arg>--meta-connect</arg>
+      <arg>jdbc:hsqldb:hsql://localhost:16000/sqoop</arg>
+      <arg>--exec</arg>
+      <arg>cdwsappTimeUpdateAppend</arg>
+      <archive>/Credit_Card_System/Oozie/lib/java-json.jar#java-json.jar</archive>
+    </sqoop>
+    <ok to="end"/>
+    <error to="fail"/>
+  </action>
+
+ <kill name="fail">
+   <message>Sqoop failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+ </kill>
+ <end name="end"/>
+</workflow-app>
